@@ -6,7 +6,7 @@ library(lubridate)
 
 
 # Read in data --------------------------------------------------------------
-# setwd
+# setwd: where is the data?
 setwd("C:/Users/Ryan/Google Drive/MSBA/Fall 2015/customer_analytics/1st_project")
 
 
