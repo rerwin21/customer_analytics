@@ -121,7 +121,7 @@ basetable_pre_agg <- left_join(registrations, customers, by = c("CompanyName" = 
 
 # get minimumn and maximum dates
 base_table <- basetable_pre_agg %>% 
-  filter(RegistrationDate <= PurchaseDate) %>% 
+  filter(RegistrationDate <= PurchaseDate | is.na(PurchaseDate)) %>% 
   group_by(CompanyName) %>% 
   summarise(first_reg = min(RegistrationDate),
             last_reg = max(RegistrationDate))
@@ -170,3 +170,14 @@ basetable_pre_agg <- basetable_pre_agg %>%
   as.data.frame(stringsAsFactors = F) %>% 
   dummy(int = T) %>% 
   bind_cols(basetable_pre_agg, .)
+
+
+# end of independent period
+today <- Sys.Date()
+
+
+
+test <- basetable_pre_agg %>% 
+  select(CompanyName, last_reg, first_reg) %>% 
+  group_by(CompanyName, first_reg, last_reg) %>% 
+  summarise(count = n())
