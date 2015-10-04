@@ -157,7 +157,12 @@ rm(customers, reg_cust, registrations, date_parse)
 # create dummies ------------------------------------------------------------
 # state, city-state, quarter, quarter-year, first & last reg year
 ## recency
-basetable_pre_agg <- basetable_pre_agg %>% 
+# end of independent period
+today <- Sys.Date()
+
+
+# begin dummy and summarization
+basetable_agg <- basetable_pre_agg %>% 
   select(reg_year, 
          reg_month, 
          reg_day, 
@@ -169,15 +174,20 @@ basetable_pre_agg <- basetable_pre_agg %>%
   sapply(as.character) %>% 
   as.data.frame(stringsAsFactors = F) %>% 
   dummy(int = T) %>% 
-  bind_cols(basetable_pre_agg, .)
+  bind_cols(select(basetable_pre_agg, CompanyName), .) %>% 
+  group_by(CompanyName) %>% 
+  summarise_each(funs(sum))
+  
 
-
-# end of independent period
-today <- Sys.Date()
-
-
-
-test <- basetable_pre_agg %>% 
-  select(CompanyName, last_reg, first_reg) %>% 
+# aggregate and summarize
+basetable_agg_total <- basetable_pre_agg %>% 
   group_by(CompanyName, first_reg, last_reg) %>% 
-  summarise(count = n())
+  summarise(total_regs = n()) %>% 
+  ungroup() %>% 
+  mutate(days_in_sys = difftime(last_reg, first_reg, units = "days"),
+         days_since_last = difftime(today, last_reg, units = "days")) %>% 
+  left_join(basetable_agg, by = c("CompanyName" = "CompanyName"))
+
+
+
+
