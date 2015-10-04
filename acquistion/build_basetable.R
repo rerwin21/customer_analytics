@@ -137,7 +137,17 @@ rm(base_table)
 
 # filter out people that had a purchase before their first registration
 basetable_pre_agg <- basetable_pre_agg %>% 
-  filter(PurchaseDate >= first_reg | is.na(PurchaseDate))
+  filter(PurchaseDate >= first_reg | is.na(PurchaseDate)) %>% 
+  select(CompanyName, 
+         reg_year, 
+         reg_month, 
+         reg_day, 
+         reg_quarter, 
+         state, 
+         city_state, 
+         first_reg, 
+         last_reg,
+         PurchaseDate)
 
 
 # remove unecessary tables
@@ -145,4 +155,18 @@ rm(customers, reg_cust, registrations, date_parse)
 
 
 # create dummies ------------------------------------------------------------
-dumb <- dummy(basetable_pre_agg, int = T)
+# state, city-state, quarter, quarter-year, first & last reg year
+## recency
+basetable_pre_agg <- basetable_pre_agg %>% 
+  select(reg_year, 
+         reg_month, 
+         reg_day, 
+         reg_quarter, 
+         state, 
+         city_state, 
+         first_reg, 
+         last_reg) %>% 
+  sapply(as.character) %>% 
+  as.data.frame(stringsAsFactors = F) %>% 
+  dummy(int = T) %>% 
+  bind_cols(basetable_pre_agg, .)
