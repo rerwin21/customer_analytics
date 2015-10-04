@@ -3,8 +3,7 @@ library(plyr)
 library(dplyr)
 library(stringr)
 library(lubridate)
-
-
+library(dummy)
 # Read in data --------------------------------------------------------------
 # setwd: where is the data?
 setwd("C:/Users/Ryan/Google Drive/MSBA/Fall 2015/customer_analytics/1st_project")
@@ -63,13 +62,6 @@ registrations <- ldply(registrations$RegistrationDate,
                    bind_cols(registrations, .)
 
 
-# get minimumn and maximum dates
-registrations <- registrations %>% 
-  group_by(CompanyName) %>% 
-  mutate(first_reg = min(RegistrationDate),
-         last_reg = max(RegistrationDate))
-
-
 # pull out the state, city and zip:  ----------------------------------------
 registrations$state <- registrations$CompanyAddress %>% 
   str_extract_all("(?<=\\,\\s?)[[:ALPHA:]]{2}(?=\\s?\\d+)") %>% 
@@ -125,6 +117,25 @@ basetable_pre_agg <- left_join(registrations, customers, by = c("CompanyName" = 
 # get rid of customers that have a purchase date before their first registration date...
 # ... same principle as removing customers that became customers in the customers table ...
 # ... that became customers without registering first
+
+
+# get minimumn and maximum dates
+base_table <- basetable_pre_agg %>% 
+  filter(RegistrationDate <= PurchaseDate) %>% 
+  group_by(CompanyName) %>% 
+  summarise(first_reg = min(RegistrationDate),
+            last_reg = max(RegistrationDate))
+
+
+# join with basetable
+basetable_pre_agg <- left_join(basetable_pre_agg, base_table, by = c("CompanyName" = "CompanyName"))
+
+
+# don't need anymore
+rm(base_table)
+
+
+# filter out people that had a purchase before their first registration
 basetable_pre_agg <- basetable_pre_agg %>% 
   filter(PurchaseDate >= first_reg | is.na(PurchaseDate))
 
@@ -134,3 +145,4 @@ rm(customers, reg_cust, registrations, date_parse)
 
 
 # create dummies ------------------------------------------------------------
+dumb <- dummy(basetable_pre_agg, int = T)
