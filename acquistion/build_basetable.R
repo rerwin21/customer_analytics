@@ -187,7 +187,3 @@ basetable_agg_total <- basetable_pre_agg %>%
   mutate(days_in_sys = difftime(last_reg, first_reg, units = "days"),
          days_since_last = difftime(today, last_reg, units = "days")) %>% 
   left_join(basetable_agg, by = c("CompanyName" = "CompanyName"))
-
-
-
-
