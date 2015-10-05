@@ -30,6 +30,10 @@ purchases$PurchaseDate <- ymd(purchases$PurchaseDate)
 registrations$RegistrationDate <- ymd(registrations$RegistrationDate)
 
 
+# filter dates
+
+
+
 # create quick function
 date_parse <- function(x, type){
   
@@ -166,10 +170,7 @@ basetable_agg <- basetable_pre_agg %>%
   select(reg_month, 
          reg_day, 
          reg_quarter, 
-         state, 
-         city_state, 
-         first_reg, 
-         last_reg) %>% 
+         state) %>% 
   sapply(as.character) %>% 
   as.data.frame(stringsAsFactors = F) %>% 
   dummy(int = T) %>% 
