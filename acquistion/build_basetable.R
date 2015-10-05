@@ -4,6 +4,8 @@ library(dplyr)
 library(stringr)
 library(lubridate)
 library(dummy)
+
+
 # Read in data --------------------------------------------------------------
 # setwd: where is the data?
 setwd("C:/Users/Ryan/Google Drive/MSBA/Fall 2015/customer_analytics/1st_project")
@@ -182,7 +184,8 @@ basetable_agg_total <- basetable_pre_agg %>%
   ungroup() %>% 
   mutate(days_in_sys = difftime(last_reg, first_reg, units = "days"),
          days_since_last = difftime(today, last_reg, units = "days")) %>% 
-  left_join(basetable_agg, by = c("CompanyName" = "CompanyName"))
+  left_join(basetable_agg, by = c("CompanyName" = "CompanyName")) %>% 
+  select(-c(first_reg, last_reg))
 
 
 # don't need anymore
