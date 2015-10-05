@@ -9,6 +9,11 @@ library(dummy)
 
 
 basetable_deploy <- function(start_ind, end_ind, start_dep, end_dep) {
+  
+  # convert dates
+  start_dep <- as.POSIXct(start_dep)
+  end_dep <- as.POSIXct(end_dep)
+  
 
   # Read in data --------------------------------------------------------------
   # setwd: where is the data?
@@ -100,6 +105,10 @@ basetable_deploy <- function(start_ind, end_ind, start_dep, end_dep) {
     mutate(Response = ifelse(PurchaseDate >= start_dep & PurchaseDate <= end_dep, 
                              1,
                              0))
+  
+  
+  # remove date, don't need
+  dep_var <- dep_var %>% select(CompanyName, Response)
   
   
   # don't need purchases anymore
@@ -201,11 +210,26 @@ basetable_deploy <- function(start_ind, end_ind, start_dep, end_dep) {
     ungroup() %>% 
     mutate(days_in_sys = difftime(last_reg, first_reg, units = "days"),
            days_since_last = difftime(today, last_reg, units = "days")) %>% 
-    left_join(basetable_agg, by = c("CompanyName" = "CompanyName"))
+    left_join(basetable_agg, by = c("CompanyName" = "CompanyName")) %>% 
+    select(-c(first_reg, last_reg))
+  
+  
+  # filter dependent variable
+  dep_var <- dep_var %>% 
+    filter(CompanyName %in% basetable_agg_total[["CompanyName"]])
+  
+  
+  # join the response to the dependent period
+  basetable_agg_total <- basetable_agg_total %>% 
+    left_join(dep_var, by = c("CompanyName" = "CompanyName"))
+  
+  
+  # if na then not a customer and response should be a zero
+  basetable_agg_total[is.na(basetable_agg_total)] <- 0
   
   
   # don't need anymore
   rm(basetable_agg)
   
-  
+  return(basetable_agg_total)
 }
