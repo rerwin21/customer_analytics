@@ -37,7 +37,7 @@ date_parse <- function(x, type){
     year,
     month,
     day,
-    function(x, ...) quarter(x, ..., with_year = T)
+    quarter
   )
   
   names(funs) <- paste(type, c("_year", "_month", "_day", "_quarter"), sep = "")
@@ -163,8 +163,7 @@ today <- Sys.Date()
 
 # begin dummy and summarization
 basetable_agg <- basetable_pre_agg %>% 
-  select(reg_year, 
-         reg_month, 
+  select(reg_month, 
          reg_day, 
          reg_quarter, 
          state, 
@@ -187,3 +186,7 @@ basetable_agg_total <- basetable_pre_agg %>%
   mutate(days_in_sys = difftime(last_reg, first_reg, units = "days"),
          days_since_last = difftime(today, last_reg, units = "days")) %>% 
   left_join(basetable_agg, by = c("CompanyName" = "CompanyName"))
+
+
+# don't need anymore
+rm(basetable_agg)
