@@ -30,10 +30,6 @@ purchases$PurchaseDate <- ymd(purchases$PurchaseDate)
 registrations$RegistrationDate <- ymd(registrations$RegistrationDate)
 
 
-# filter dates
-
-
-
 # create quick function
 date_parse <- function(x, type){
   
