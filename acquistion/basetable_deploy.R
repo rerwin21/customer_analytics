@@ -186,7 +186,7 @@ basetable_deploy <- function(start_ind, end_ind, start_dep, end_dep) {
   # state, city-state, quarter, quarter-year, first & last reg year
   ## recency
   # end of independent period
-  today <- Sys.Date()
+  
   
   
   # begin dummy and summarization
@@ -196,8 +196,16 @@ basetable_deploy <- function(start_ind, end_ind, start_dep, end_dep) {
            reg_quarter, 
            state) %>% 
     sapply(as.character) %>% 
-    as.data.frame(stringsAsFactors = F) %>% 
-    dummy(int = T) %>% 
+    as.data.frame(stringsAsFactors = F)
+  
+  
+  # define categories
+  categ <- categories(basetable_agg)
+  
+  
+  # pass the categories to the dummy function
+  basetable_agg <- basetable_agg %>% 
+    dummy(int = T, object = categ) %>% 
     bind_cols(select(basetable_pre_agg, CompanyName), .) %>% 
     group_by(CompanyName) %>% 
     summarise_each(funs(sum))
@@ -209,7 +217,7 @@ basetable_deploy <- function(start_ind, end_ind, start_dep, end_dep) {
     summarise(total_regs = n()) %>% 
     ungroup() %>% 
     mutate(days_in_sys = difftime(last_reg, first_reg, units = "days"),
-           days_since_last = difftime(today, last_reg, units = "days")) %>% 
+           days_since_last = difftime(end_ind, last_reg, units = "days")) %>% 
     left_join(basetable_agg, by = c("CompanyName" = "CompanyName")) %>% 
     select(-c(first_reg, last_reg))
   
@@ -231,5 +239,6 @@ basetable_deploy <- function(start_ind, end_ind, start_dep, end_dep) {
   # don't need anymore
   rm(basetable_agg)
   
-  return(basetable_agg_total)
+  return(list(basetable = basetable_agg_total,
+              category = categ))
 }
