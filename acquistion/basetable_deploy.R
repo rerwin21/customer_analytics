@@ -102,9 +102,9 @@ basetable_deploy <- function(start_ind, end_ind, start_dep, end_dep) {
   # create dependent variable
   dep_var <- customers %>% 
     select(CompanyName, PurchaseDate) %>% 
-    mutate(Response = ifelse(PurchaseDate >= start_dep & PurchaseDate <= end_dep, 
+    mutate(Response = as.factor(ifelse(PurchaseDate >= start_dep & PurchaseDate <= end_dep, 
                              1,
-                             0))
+                             0)))
   
   
   # remove date, don't need
