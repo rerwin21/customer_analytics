@@ -397,8 +397,7 @@
       end_month = as.factor(month(EndDate)),
       Pattern = as.factor(Pattern),
       ProductID = as.factor(ProductID),
-      FormulaID = as.factor(FormulaID),
-      disc_perc = TotalDiscount/GrossFormulaPrice
+      FormulaID = as.factor(FormulaID)
     )
   
   

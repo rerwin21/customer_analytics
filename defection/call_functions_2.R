@@ -31,12 +31,12 @@ setwd("C:/Users/Ryan/Google Drive/MSBA/Fall 2015/customer_analytics/2nd project"
 source("data_prep_2.R")
 
 
-test <- .read.and.prepare.data(train = T)
-
-
-#Temporary read and prepare testing
-testTrain <- .read.and.prepare.data()
-testDeploy <- .read.and.prepare.data(train = F, cats = testTrain$categories)
+# test <- .read.and.prepare.data(train = T)
+# 
+# 
+# #Temporary read and prepare testing
+# testTrain <- .read.and.prepare.data()
+# testDeploy <- .read.and.prepare.data(train = F, cats = testTrain$categories)
 
 
 #Build Model-----------------------------------------------------------------
