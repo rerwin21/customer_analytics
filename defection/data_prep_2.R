@@ -7,7 +7,8 @@
     filter(StartDate <= end.ind,
            EndDate <= end.dep,
            EndDate >= start.dep)
-  customers <- subscriptions %>% select(CustomerID, SubscriptionID)
+  customers <- subscriptions %>% 
+    select(CustomerID, SubscriptionID)
   return(customers)
 }
 
@@ -224,9 +225,7 @@
     mutate(
       DOB = dmy(DOB),
       Gender = as.factor(Gender),
-      District = as.factor(District),
-      ZIP = as.factor(ZIP),
-      StreetID = as.factor(StreetID)
+      District = as.factor(District)
     )
   
   
@@ -436,33 +435,40 @@
               FormulaCode,
               FormulaType))
   
+  # replace na's
+  subs_appended[is.na(subs_appended)] <- 0
+  
+  
   # counts
   subs_count <- subs_appended %>% 
     group_by(CustomerID) %>% 
     summarise(subs_count = n())
   
   
-  # avgerages
+  # averages
   subs_avg <- subs_appended %>% 
-    select(CustomerID,
-           NetNewspaperPrice,
-           Duration,
-           disc_perc,
-           Avg_DeliveryDuration) %>% 
+    select(-c(start_month, end_month)) %>% 
     group_by(CustomerID) %>% 
     summarise_each(funs(mean))
   
   
+  
+  # rename
+  names(subs_avg)[2:length(names(subs_avg))] <- paste(names(subs_avg)[2:length(names(subs_avg))], 
+                                                      "_avg", 
+                                                      sep = "")
+  
+  
   # sums
   subs_sum <- subs_appended %>% 
-    select(-c(NetNewspaperPrice,
-              Duration,
-              disc_perc,
-              Avg_DeliveryDuration,
-              start_month,
-              end_month)) %>% 
+    select(-c(start_month, end_month)) %>% 
     group_by(CustomerID) %>% 
     summarize_each(funs(sum))
+  
+  # rename
+  names(subs_sum)[2:length(names(subs_sum))] <- paste(names(subs_sum)[2:length(names(subs_sum))], 
+                                                      "_sum", 
+                                                      sep = "")
   
   
   # create list of aggregated subscriptions
