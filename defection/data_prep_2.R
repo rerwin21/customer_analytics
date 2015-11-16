@@ -129,7 +129,7 @@
 }
 
 
-# complaint aggregation -----------------------------------------------------
+# complaints aggregation -----------------------------------------------------
 .comps_agg <- function(t1, t2, comps, act_cust, train = T, ...) {
   
   
@@ -733,7 +733,7 @@
 }
 
 
-# Build Model  --------------------------------------------------------------
+# Build classification model  --------------------------------------------------------------
 defectionModel <- function(start.ind, end.ind, start.dep, end.dep, 
                            evaluate = T, verbose = T) {
   
