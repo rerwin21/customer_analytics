@@ -359,6 +359,10 @@
   
   
   # replace na's
+  sub[is.na(sub)] <- 0
+  
+  
+  # replace na's
   sub[ , which(names(sub) %in% c(names(agg_credit), names(agg_deliver)))] <- 
     sapply(sub[,which(names(sub) %in% c(names(agg_credit), names(agg_deliver)))],
            function(x) ifelse(is.na(x), 0, x))
@@ -591,6 +595,7 @@
                                       end.ind, 
                                       Train = train)
     
+    
     all_categories$deliver <- agg_deliver$cats
     agg_deliver <- agg_deliver$table
     
@@ -765,25 +770,26 @@ defectionModel <- function(start.ind, end.ind, start.dep, end.dep,
     Y_Test <- as.factor(response[test])
     
     # Train randomForest model
-    RFmodel <- randomForest(X_Train, Y_Train, ntree = 100, importance=TRUE)
+    RFmodel <- randomForest(X_Train, Y_Train, ntree = 500, importance=TRUE)
+    
     
     # Plot Learning Curve
     plot(RFmodel)
     
     
     # Plot Variable Importances
-    varImpPlot(RFmodel, n=10)
+    varImpPlot(RFmodel, n = 10)
     
     
     # Print AUC
     # must predict with type='prob' (want scores)
     pred <- predict(RFmodel, newdata = X_Test, type = 'prob')[,2]
-    auc <- auc(roc(pred, Y_Test))
+    auc <- AUC::auc(roc(pred, Y_Test))
     cat('AUC is: ', auc, '\n')
     
     
     # Plot ROC Curve
-    plot(roc(pred,Y_Test), main = "Random Forest ROC")
+    plot(roc(pred, Y_Test), main = "Random Forest ROC")
     #print confusion matrix (only if predictions are labels)
     # table(Y_Test,pred,dnn = list("Actual","Predicted"))
     
@@ -803,8 +809,16 @@ defectionModel <- function(start.ind, end.ind, start.dep, end.dep,
   RFmodel <- randomForest(X, Y, ntree = 500, importance = TRUE)
   
   # dispatch output as 'acquisition' for predict.acquisition()
-  out <- list(length=end.ind-start.ind, categories=dataprep[[2]], model=RFmodel)
+  out <- list(length = end.ind - start.ind, 
+              categories = dataprep[[2]], 
+              model=RFmodel)
+  
+  
+  # change class for method dispatching
   class(out) <- 'defection'
+  
+  
+  # return object
   return(out)
 }
 
