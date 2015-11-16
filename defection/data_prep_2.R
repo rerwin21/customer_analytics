@@ -1,5 +1,7 @@
 # get customers needed for modeling -----------------------------------------
 .getIndependentCustomers <- function(subscriptions, start.ind, end.ind, start.dep, end.dep) {
+  
+  
   #Filter down to subscriptions that begin in independent pd. and end in dependent period
   subscriptions <- subscriptions %>%
     mutate(StartDate = as.Date(StartDate, format = "%d/%m/%Y"),
@@ -7,8 +9,11 @@
     filter(StartDate <= end.ind,
            EndDate <= end.dep,
            EndDate >= start.dep)
+  
   customers <- subscriptions %>% 
     select(CustomerID, SubscriptionID)
+  
+  # return the active customers and subscriptions
   return(customers)
 }
 
@@ -281,20 +286,21 @@
   # convert date
   subs <- subs %>% 
     mutate(
-      RenewalDate = dmy(RenewalDate)
+      StartDate = dmy(StartDate)
     )
   
   
   # filter out the uneccessary customers
   subs <- subs %>% 
-    filter(SubscriptionID %in% act_cust$SubscriptionID)
+    filter(CustomerID %in% act_cust$CustomerID)
   
   
   # create interval using dependent dates
   dep_interval <- interval(t3, t4)
   
+  
   # compute interim response
-  subs$churn <- ifelse(subs$RenewalDate %within% dep_interval, 1, 0)
+  subs$churn <- ifelse(subs$StartDate %within% dep_interval, 1, 0)
   
   
   # convert na's to zero
@@ -713,11 +719,11 @@
   if(train==T) {
     
     # Dependent Var calculation
-    Churn <- dep_var <- .dep_variable(end.ind,
-                                      start.dep,
-                                      end.dep,
-                                      subscriptions,
-                                      active_subs)
+    Churn <- .dep_variable(end.ind,
+                           start.dep,
+                           end.dep,
+                           subscriptions,
+                           active_subs)
   }
   
   
@@ -775,7 +781,7 @@ defectionModel <- function(start.ind, end.ind, start.dep, end.dep,
     Y_Test <- as.factor(response[test])
     
     # Train randomForest model
-    RFmodel <- randomForest(X_Train, Y_Train, ntree = 500, importance=TRUE)
+    RFmodel <- randomForest(X_Train, Y_Train, ntree = 500, importance = TRUE)
     
     
     # Plot Learning Curve
@@ -816,7 +822,8 @@ defectionModel <- function(start.ind, end.ind, start.dep, end.dep,
   # dispatch output as 'acquisition' for predict.acquisition()
   out <- list(length = end.ind - start.ind, 
               categories = dataprep[[2]], 
-              model=RFmodel)
+              model=RFmodel,
+              Basetable = Basetable)
   
   
   # change class for method dispatching
