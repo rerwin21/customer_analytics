@@ -1,9 +1,9 @@
 rm(list=ls())
 # define dates --------------------------------------------------------------
-start.ind <- as.Date("2006-01-01")
-end.ind <- as.Date("2009-12-31")
-start.dep <- as.Date("2010-01-01")
-end.dep <- as.Date("2010-12-31")
+ind_start <- as.Date("2006-01-01")
+ind_end <- as.Date("2009-12-31")
+dep_start <- as.Date("2010-01-01")
+dep_end <- as.Date("2010-12-31")
 
 # load the required packages ------------------------------------------------
 if(require(plyr) == F) {install.packages("plyr")
@@ -40,7 +40,10 @@ source("data_prep_2.R")
 
 
 #Build Model-----------------------------------------------------------------
-object <- defectionModel(start.ind, end.ind, start.dep, end.dep)
+object <- defectionModel(start.ind = ind_start, 
+                         end.ind = ind_end, 
+                         start.dep = dep_start, 
+                         end.dep = dep_end)
 
 
 #Predict From Dump.Date------------------------------------------------------

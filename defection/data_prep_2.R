@@ -307,7 +307,10 @@
   subs <- subs %>% 
     mutate(
       churn = ifelse(is.na(churn), 0, churn)
-    )
+    ) %>% 
+    arrange(CustomerID)
+  
+  
   
   
   # summarise to get final response
@@ -326,12 +329,14 @@
 
 # append subscriptions with aggregated credit and deliver, and ... ----------
 # ... the forumla table
-.append_subs <- function(subs, agg_credit, agg_deliver, formula, active_subs) {
+.append_subs <- function(subs, agg_credit, agg_deliver, formula, active_subs, end.ind) {
   
   
   # filter subs
   subs <- subs %>% 
-    filter(CustomerID %in% active_subs$CustomerID)
+    mutate(StartDate = as.Date(dmy(StartDate))) %>% 
+    filter(CustomerID %in% active_subs$CustomerID,
+           StartDate <= end.ind)
   
   
   # convert ids for joining
@@ -367,12 +372,6 @@
   sub[is.na(sub)] <- 0
   
   
-  # replace na's
-  sub[ , which(names(sub) %in% c(names(agg_credit), names(agg_deliver)))] <- 
-    sapply(sub[,which(names(sub) %in% c(names(agg_credit), names(agg_deliver)))],
-           function(x) ifelse(is.na(x), 0, x))
-  
-  
   # convert to numeric
   sub[ , which(names(sub) %in% c(names(agg_credit), names(agg_deliver)))] <- 
     sapply(sub[,which(names(sub) %in% c(names(agg_credit), names(agg_deliver)))],
@@ -395,7 +394,6 @@
   # convert the dates
   subs_appended <- subs_appended %>% 
     mutate(
-      StartDate = dmy(StartDate),
       EndDate = dmy(EndDate),
       RenewalDate = dmy(RenewalDate),
       PaymentDate = dmy(PaymentDate),
@@ -516,6 +514,11 @@
   basetable[is.na(basetable)] <- 0
   
   
+  # sort
+  basetable <- basetable %>% 
+    arrange(CustomerID)
+  
+  
   # return the basetable
   return(basetable)
 }
@@ -528,6 +531,8 @@
   # get optional arguments
   if(length(list(...)$start.ind) != 0) {start.ind <- list(...)$start.ind}
   if(length(list(...)$end.ind) != 0) {end.ind <- list(...)$end.ind}
+  if(length(list(...)$start.dep) != 0) {start.dep <- list(...)$start.dep}
+  if(length(list(...)$end.dep) != 0) {end.dep <- list(...)$end.dep}
   if(length(list(...)$cats) != 0) {cats <- list(...)$cats}
   
   
@@ -575,10 +580,7 @@
                                           start.dep,
                                           end.dep)
   
-  
-  
-  
-  
+
   # aggregate data into subscription level  
   if(train == T) {
     
@@ -618,7 +620,8 @@
                                 agg_credit,
                                 agg_deliver,
                                 formula,
-                                active_subs)
+                                active_subs,
+                                end.ind)
     
     
     # summarize appended subs
@@ -688,7 +691,8 @@
                                 agg_credit,
                                 agg_deliver,
                                 formula,
-                                active_subs)
+                                active_subs,
+                                end.ind)
     
     
     # summarize appended subs
