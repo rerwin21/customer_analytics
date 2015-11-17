@@ -47,5 +47,5 @@ object <- defectionModel(start.ind = ind_start,
 
 
 #Predict From Dump.Date------------------------------------------------------
-dump.date <- as.Date("2011-12-31")
+dump.date <- as.Date("2010-12-31")
 pred <- predict(object = object, dump.date = dump.date)
