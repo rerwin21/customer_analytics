@@ -868,7 +868,7 @@ defectionModel <- function(start.ind, end.ind, start.dep, end.dep,
   Y <- as.factor(response)
   RFmodel <- randomForest(X, Y, ntree = 500, importance = TRUE)
   
-  # dispatch output as 'acquisition' for predict.acquisition()
+  # dispatch output as 'defection' for predict.defection()
   out <- list(length = end.ind - start.ind,
               length.dep = end.dep - start.dep,
               categories = dataprep[[2]], 
