@@ -839,6 +839,21 @@ defectionModel <- function(start.ind, end.ind, start.dep, end.dep,
     # table(Y_Test,pred,dnn = list("Actual","Predicted"))
     
     
+    # plot the partial dependence plot: pick a few
+    # number of newspapers
+    partialPlot(x = RFmodel,
+                x.var = "NbrNewspapers_avg",
+                pred.data = as.data.frame(X_Test),
+                which.class = 1)
+    
+    
+    # Gross Formula Price
+    partialPlot(x = RFmodel,
+                x.var = "GrossFormulaPrice_avg",
+                pred.data = as.data.frame(X_Test),
+                which.class = 1)
+    
+    
     # Plot Lift Curve
     if (require('lift')==FALSE) install.packages('lift',repos='http://cran.rstudio.com',quiet=TRUE); require('lift')
     plotLift(pred,Y_Test)
