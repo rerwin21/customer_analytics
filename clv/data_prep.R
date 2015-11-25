@@ -97,7 +97,8 @@
   td_products <- td_products %>% 
     mutate(
       price = price * quantity,
-      cost = cost * quantity
+      cost = cost * quantity,
+      profit = price - cost
     )
   
   
@@ -160,13 +161,13 @@
   
   
   # training categories or deployment?
-  if(train == T){ cat <- categories(trans_store)}
+  if(train == T){cats <- categories(trans_store)}
   
   
   # create dummies
   trans_store_dummy <- dummy(trans_store, 
                              int = T,
-                             object = cat)
+                             object = cats)
   
   
   # bind dummies with original table
@@ -249,4 +250,76 @@
   return(basetable)
 }
 
-# 
+
+# create dependent variable: clv
+.create_clv <- function(trans, active_cust, disc_rate = 0.04,
+                       trans_details, products, 
+                       start.dep, end.dep,
+                       train = T){
+  
+  # convert date
+  trans$date <- as.Date(ymd(trans$date))
+  
+  
+  # filter trans for active customers only
+  trans <- trans %>% 
+    filter(custid %in% active_cust,
+           date >= start.dep,
+           date <= end.dep)
+  
+  
+  # get profit per item
+  profit_item <- .join_td_products(trans_details, products)
+  
+  
+  # summarize profit per item to transaction level
+  profit_trans <- profit_item %>% 
+    group_by(receiptnbr) %>% 
+    summarise(
+      profit = sum(profit)
+    )
+  
+  
+  # join profit with transactions
+  trans <- left_join(trans, profit_trans, "receiptnbr")
+  
+  
+  # function for clv for each purchase
+  clv <- function(disc_rate, profit, start.dep, date) {
+    
+    # get discount factor then calculate clv contribution for that purchase
+    dp_do <- as.numeric(date - start.dep)
+    disc_factor <- (1 + disc_rate)^(dp_do/365)
+    clv_p <- profit/disc_factor
+    
+    # clv contribution for this customer
+    return(clv_p)
+  }
+  
+  
+  # calculate the clv for each purchase customer
+  trans_clv <- trans %>% 
+    mutate(
+      clv = clv(disc_rate, profit, start.dep, date),
+      clv = round(clv, 2)
+    ) %>% 
+    group_by(custid) %>% 
+    summarise(
+      clv = sum(clv)
+    ) %>% 
+    ungroup() %>% 
+    arrange(custid)
+  
+  
+  # get full list (those w/ and w/o purchases in dep)
+  response <- data.frame(custid = active_cust) %>% 
+    left_join(trans_clv, "custid") %>% 
+    mutate(
+      clv = ifelse(!is.na(clv), clv, 0)
+    ) %>% 
+    arrange(custid)
+  
+  
+  # return the response variable
+  return(response)  
+}
