@@ -137,4 +137,69 @@
 }
 
 
+# summarize and aggregate the active customers in trans_store
+.agg_trans_store <- function(trans_store, active_cust, agg_td_products, 
+                             start.ind, end.ind, train = T, ...){
+  
+  # get optional arguments
+  if(length(list(...)$cats) != 0) {cats <- list(...)$cats}
+  
+  
+  # convert factors and date then filter
+  trans_store <- trans_store %>% 
+    mutate(
+      date = as.Date(ymd(date)),
+      storeid = as.factor(storeid),
+      ZIP = as.factor(ZIP)
+    ) %>% 
+    filter(
+      custid %in% active_cust,
+      date >= start.ind,
+      date <= end.ind
+    )
+  
+  
+  # training categories or deployment?
+  if(train == T){ cat <- categories(trans_store)}
+  
+  
+  # create dummies
+  trans_store_dummy <- dummy(trans_store, 
+                             int = T,
+                             object = cat)
+  
+  
+  # bind dummies with original table
+  trans_store <- bind_cols(trans_store, trans_store_dummy)
+  
+  
+  # join product details from aggregated transactions details
+  trans_store <- left_join(trans_store, agg_td_products, "receiptnbr")
+  
+  
+  # get the count of stores
+  trans_store_count <- trans_store %>% 
+    group_by(custid) %>% 
+    summarise(
+      n_trips = n()
+    )
+  
+  
+  # aggregate sums
+  trans_store_sum <- trans_store %>% 
+    select(-c(receiptnbr, date, storeid, ZIP)) %>% 
+    group_by(custid) %>% 
+    summarise_each(funs(sum))
+  
+  
+  # join count and sums
+  agg_trans_store <- left_join(trans_store_count, 
+                               trans_store_sum,
+                               "custid")
+  
+  
+  # return the aggregated transactions and details
+  return(agg_trans_store)
+}
+
 # 
