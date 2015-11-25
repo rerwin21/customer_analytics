@@ -50,44 +50,37 @@
 
 # data processing helper functions ------------------------------------------
 # get active customers
-.get_active_cust <- function(trans, train = T, ...){
+.get_active_cust <- function(trans, ...){
   
   # get optional arguments
-  if(length(list(...)$length.dep) != 0) {length.dep <- list(...)$length.dep}
-  if(length(list(...)$start.ind) != 0) {start.ind <- list(...)$start.ind}
   if(length(list(...)$end.ind) != 0) {end.ind <- list(...)$end.ind}
-  if(length(list(...)$start.dep) != 0) {start.dep <- list(...)$start.dep}
-  if(length(list(...)$end.dep) != 0) {end.dep <- list(...)$end.dep}
   
   
   # convert transaction date to date/time object
   trans$date <- ymd(trans$date)
-   
   
-  if(train == T) {
-    
-    # filter down to customers that have had a purchase in the last 90 days
-    trans <- trans %>% 
-      filter(as.Date(date) >= (end.ind - 90),
-             as.Date(date) <= end.ind) %>% 
-      select(custid) %>% 
-      distinct()
-    
-  } else {
-    
-    #Filter down to subscriptions that begin in independent pd. and end in dependent period
-    subscriptions <- subscriptions %>%
-      mutate(StartDate = as.Date(StartDate, format = "%d/%m/%Y"),
-             EndDate = as.Date(EndDate, format = "%d/%m/%Y")) %>% 
-      filter(StartDate <= end.ind,
-             EndDate <= length.dep + end.ind,
-             EndDate >= end.ind)
-    
-  }
   
-  customers <- subscriptions %>% 
-    select(CustomerID, SubscriptionID)
+  # filter down to customers that have had a purchase in the last 90 days
+  active_cust <- trans %>% 
+    filter(as.Date(date) >= (end.ind - 90),
+           as.Date(date) <= end.ind) %>% 
+    select(custid) %>% 
+    distinct() %>% 
+    .[[1]]
+  
   
   # return the active customers and subscriptions
-  return(customers)
+  return(active_cust)
+}
+
+
+# join store and transactions
+.join_trans_store <- function(trans, stores){
+  
+  # join the to tables together
+  trans_store <- left_join(trans, stores, "storeid")
+  
+  
+  # return the joined tables
+  return(trans_store)
 }
