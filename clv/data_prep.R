@@ -84,3 +84,57 @@
   # return the joined tables
   return(trans_store)
 }
+
+
+# join products and trans_details
+.join_td_products <- function(trans_details, products){
+  
+  # join the tables
+  td_products <- left_join(trans_details, products, "SKU")
+  
+  
+  # create total price and cost
+  td_products <- td_products %>% 
+    mutate(
+      price = price * quantity,
+      cost = cost * quantity
+    )
+  
+  
+  # return the td's with products
+  return(td_products)
+}
+
+
+# summarize and compute td_products
+.agg_td_products <- function(td_products, train = T, ...){
+  
+  # get optional arguments
+  if(length(list(...)$cats) != 0) {cats <- list(...)$cats}
+  
+  
+  # create cats based 
+  if(train == T){
+    cats <- categories(td_products)
+  }
+  
+  
+  # create dummies
+  td_prods_dummy <- dummy(td_products,
+                          int = T,
+                          object = cats)
+  
+  
+  # bind the dummies with original table
+  td_products <- bind_cols(td_products, td_prods_dummy)
+  
+  
+  # summarize the columns and dummies
+  td_products <- td_products %>% 
+    select(-c(SKU, family)) %>% 
+    group_by(receiptnbr) %>% 
+    summarise_each(funs(sum))
+}
+
+
+# 
