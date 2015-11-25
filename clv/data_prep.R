@@ -202,4 +202,51 @@
   return(agg_trans_store)
 }
 
+
+# update active customers and join aggregated trans_store information
+.create_basetable <- function(customers, active_cust, agg_trans_store,
+                              train = T, end.ind, ...){
+  
+  # get optional arguments
+  if(length(list(...)$cats) != 0) {cats <- list(...)$cats}
+  
+  
+  # filter down to active customers and convert date to create age variable
+  act_cust <- customers %>% 
+    filter(custid %in% active_cust) %>% 
+    mutate(
+      dob = as.Date(ymd(dob)),
+      age = (end.ind - dob)/365.25,
+      age = ceiling(age)
+    )
+  
+  
+  # training categories or deployment
+  if(train == T) {cats <- categories(act_cust)}
+  
+  
+  # create dummies for customer (just in case)
+  cust_dummy <- dummy(act_cust, int = T, object = cats)
+  
+  
+  # bind the dummies with original table of active customers
+  act_cust <- bind_cols(act_cust, cust_dummy)
+  
+  
+  # join active customers with purchasing history
+  basetable <- left_join(act_cust, 
+                         agg_trans_store,
+                         "custid")
+  
+  
+  # remove unnecessary columns
+  basetable <- basetable %>% 
+    select(-c(rent, garden, gender, dob)) %>% 
+    arrange(custid)
+  
+ 
+  # return the basetable 
+  return(basetable)
+}
+
 # 
