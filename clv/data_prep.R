@@ -50,7 +50,7 @@
 
 # data processing helper functions ------------------------------------------
 # get active customers
-.get_active_cust <- function(trans, ...){
+.get_active_cust <- function(trans, active_window, ...){
   
   # get optional arguments
   if(length(list(...)$end.ind) != 0) {end.ind <- list(...)$end.ind}
@@ -62,7 +62,7 @@
   
   # filter down to customers that have had a purchase in the last 90 days
   active_cust <- trans %>% 
-    filter(as.Date(date) >= (end.ind - 90),
+    filter(as.Date(date) >= (end.ind - active_window),
            as.Date(date) <= end.ind) %>% 
     select(custid) %>% 
     distinct() %>% 
@@ -429,16 +429,27 @@
 # wrapper function for helpers: read and prepare data -----------------------
 .read.and.prepare.data <- function(train = T, ...) {
   
-  # get optional arguments
+  # get optional arguments: - - - - - - - - - - - - - - - - - - - - - - - - -
+  # dates and categories
   if(length(list(...)$start.ind) != 0) {start.ind <- list(...)$start.ind}
   if(length(list(...)$end.ind) != 0) {end.ind <- list(...)$end.ind}
   if(length(list(...)$start.dep) != 0) {start.dep <- list(...)$start.dep}
   if(length(list(...)$end.dep) != 0) {end.dep <- list(...)$end.dep}
   if(length(list(...)$cats) != 0) {cats <- list(...)$cats}
+  
+  # discount rate for clv calculation
   if(length(list(...)$disc_rate) != 0) {
     disc_rate <- list(...)$disc_rate
   } else {
     disc_rate <- 0.04
+  }
+  
+  # window for active customers (days): default value of 90 means ...
+  # ... must have purchase within last 90 days to be an active customer
+  if(length(list(...)$active_window) != 0) {
+    active_window <- list(...)$active_window
+  } else {
+    active_window <- 90
   }
   
   # read in data  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -499,6 +510,7 @@
   
   # get the active customers 
   active_cust <- .get_active_cust(trans = trans,
+                                  active_window = active_window,
                                   end.ind = end.ind)
   
   
