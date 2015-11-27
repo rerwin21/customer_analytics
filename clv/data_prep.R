@@ -40,6 +40,16 @@
   # lift chart
   if(require(lift) == F){install.packages("lift",repos='http://cran.rstudio.com',quiet=TRUE) 
     library(lift)}
+  
+  
+  # miscTools for rSquared function
+  if(require(miscTools) == F){install.packages("miscTools", quiet = T)
+    library(miscTools, quietly = T)}
+  
+  
+  # ggplot for some plotting
+  if(require(ggplot2) == F){install.packages("ggplot2", quiet = T)
+    library(ggplot2, quietly = T)}
 }
 
 
@@ -345,6 +355,10 @@
     arrange(custid)
   
   
+  # remove NA's
+  basetable[is.na(basetable)] <- 0
+  
+  
   # return the basetable 
   if(train) {
     return(list(table = basetable, cats = cats))
@@ -616,8 +630,138 @@
   if(train) {
     return(list(basetable = basetable, 
                 categories = all_categories, 
-                response = clv$clv))
+                response = clv$clv,
+                active_window = active_window))
   } else {
     return(list(basetable = basetable))
   }
+}
+
+
+# build model ---------------------------------------------------------------
+clv_model <- function(start.ind, end.ind, start.dep, end.dep, 
+                      evaluate = T, verbose = T, ...) {
+  
+  # optional arguments - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  # discount rate for clv calculation
+  if(length(list(...)$disc_rate) != 0) {
+    disc_rate <- list(...)$disc_rate
+  } else {
+    disc_rate <- 0.04
+  }
+  
+  # window for active customers (days): default value of 90 means ...
+  # ... must have purchase within last 90 days to be an active customer
+  if(length(list(...)$active_window) != 0) {
+    active_window <- list(...)$active_window
+  } else {
+    active_window <- 90
+  }
+  
+  
+  # Call read and prepare data to get basetable - - - - - - - - - - - - - - -
+  dataprep <- .read.and.prepare.data(train = T, 
+                                     start.ind = start.ind, 
+                                     end.ind = end.ind, 
+                                     start.dep = start.dep, 
+                                     end.dep = end.dep,
+                                     disc_rate = disc_rate,
+                                     active_window = active_window)
+  
+  
+  # pull basetable from dataprep
+  basetable <- dataprep$basetable
+  
+  
+  # pull out the response variable from dataprep
+  response <- dataprep$response
+  
+  
+  # Evaluate Performace of a Random Forest Model 
+  if(evaluate) {
+    
+    #get training indices
+    train <- sample(nrow(basetable), .7*nrow(basetable))
+    test <- c(1:nrow(basetable))[-train]
+    
+    # split basetable into Train and Test portions
+    X_Train <- basetable[train, -which(names(basetable) %in% c("custid"))]
+    Y_Train <- response[train]
+    X_Test <- basetable[test, -which(names(basetable) %in% c("custid"))]
+    Y_Test <- response[test]
+    
+    # Train randomForest model
+    RFmodel <- randomForest(X_Train, Y_Train, ntree = 1000, importance = TRUE)
+    
+    
+    # Plot Learning Curve
+    plot(RFmodel)
+    
+    
+    # Plot Variable Importances
+    varImpPlot(RFmodel, n = 10)
+    
+    
+    # Print AUC
+    # must predict with type='prob' (want scores)
+    pred <- predict(RFmodel, newdata = X_Test)
+    
+    
+    # actual vs predicted
+    a_p <- data.frame(actual = Y_Test, pred = pred)
+    
+    
+    # evaluation of regression
+    r2 <- rSquared(Y_Test, Y_Test - pred)
+    cat("R-squared for test set is: ", r2)
+    
+    
+    # plot actual versus predicted
+    p <- ggplot(a_p, aes(x = actual, y = pred)) + 
+      geom_point() +
+      geom_abline(color = "red") + 
+      ggtitle(paste("RandomForest Regression in R r^2=", r2, sep=""))
+    
+    
+    # print plot
+    print(p)
+    
+    
+    # plot the partial dependence plot: pick a few
+    # number of newspapers
+    partialPlot(x = RFmodel,
+                x.var = "LOR",
+                pred.data = as.data.frame(X_Test))
+    
+    
+    # Gross Formula Price
+    partialPlot(x = RFmodel,
+                x.var = "last_90_total",
+                pred.data = as.data.frame(X_Test))
+  }
+  
+  
+  #   # train big model
+  #   X <- basetable[ , -which(names(basetable) %in% c("custid"))]
+  #   Y <- response
+  #   RFmodel <- randomForest(X, Y, ntree = 500, importance = TRUE)
+  
+  
+  # dispatch output as 'defection' for predict.defection()
+  out <- list(length = end.ind - start.ind,
+              length.dep = end.dep - start.dep,
+              categories = dataprep$categories, 
+              model = RFmodel,
+              basetable = basetable,
+              active_window = dataprep$active_window,
+              act_pred = a_p,
+              r2 = r2)
+  
+  
+  # change class for method dispatching
+  class(out) <- "clv"
+  
+  
+  # return object
+  return(out)
 }
