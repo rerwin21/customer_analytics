@@ -152,9 +152,7 @@
   
   
   # create cats based 
-  if(train == T){
-    cats <- categories(td_products)
-  }
+  if(train == T){cats <- categories(td_products)}
   
   
   # create dummies
@@ -175,7 +173,11 @@
   
   
   # return the aggregated td_products
-  return(td_products)
+  if(train) {
+    return(list(table = td_products, cats = cats))
+  } else {
+    return(td_products)
+  }
 }
 
 
@@ -288,7 +290,11 @@
   
   
   # return the aggregated transactions and details
-  return(agg_trans_store)
+  if(train) {
+    return(list(table = agg_trans_store, cats = cats))
+  } else {
+    return(agg_trans_store)
+  }
 }
 
 
@@ -335,12 +341,16 @@
   
   
   # return the basetable 
-  return(basetable)
+  if(train) {
+    return(list(table = basetable, cats = cats))
+  } else {
+    return(basetable)
+  }
 }
 
 
 # create dependent variable: clv
-.create_clv <- function(trans, active_cust, disc_rate = 0.04,
+.create_clv <- function(trans, active_cust, disc_rate,
                         trans_details, products, 
                         start.dep, end.dep,
                         train = T){
@@ -417,3 +427,194 @@
 
 
 # wrapper function for helpers: read and prepare data -----------------------
+.read.and.prepare.data <- function(train = T, ...) {
+  
+  # get optional arguments
+  if(length(list(...)$start.ind) != 0) {start.ind <- list(...)$start.ind}
+  if(length(list(...)$end.ind) != 0) {end.ind <- list(...)$end.ind}
+  if(length(list(...)$start.dep) != 0) {start.dep <- list(...)$start.dep}
+  if(length(list(...)$end.dep) != 0) {end.dep <- list(...)$end.dep}
+  if(length(list(...)$cats) != 0) {cats <- list(...)$cats}
+  if(length(list(...)$disc_rate) != 0) {
+    disc_rate <- list(...)$disc_rate
+  } else {
+    disc_rate <- 0.04
+  }
+  
+  # read in data  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  customers <- read.csv("customers.csv", 
+                        stringsAsFactors = F)
+  
+  
+  stores <- read.csv("stores.csv",
+                     stringsAsFactors = F)
+  
+  
+  trans <- read.csv("transactions.csv",
+                    stringsAsFactors = F)
+  
+  
+  # products and trans_details have problems with ...
+  # .. leading zeros (in SKU) and need to be correctly loaded
+  # need to see how many columns
+  products <- read.csv("products.csv", 
+                       stringsAsFactors = F,
+                       nrows = 10)
+  
+  
+  products <- read.csv("products.csv", 
+                       stringsAsFactors = F,
+                       colClasses = rep("character", 
+                                        ncol(products)))
+  
+  
+  # columns to change
+  num_cols <- c("family", "price", "cost")
+  
+  
+  # change the columns to numeric for product
+  products[ , num_cols] <- suppressWarnings(
+    sapply(products [ , num_cols], as.numeric)
+  ) 
+  
+  
+  trans_details <- read.csv("transactiondetails.csv",
+                            stringsAsFactors = F,
+                            nrows = 10)
+  
+  
+  # td defaults and change SKU
+  td_class <- sapply(trans_details, class)
+  td_class["SKU"] <- "character"
+  
+  
+  trans_details <- read.csv("transactiondetails.csv",
+                            stringsAsFactors = F,
+                            colClasses = td_class)
+  
+  
+  # summarize and compute tables then join where each row ...  - - - - - - - 
+  # ... is a customer
+  
+  
+  # get the active customers 
+  active_cust <- .get_active_cust(trans = trans,
+                                  end.ind = end.ind)
+  
+  
+  # join transactions with store information
+  trans_store <- .join_trans_store(trans = trans, 
+                                   stores = stores)
+  
+  
+  # join td's with products
+  td_products <- .join_td_products(trans_details = trans_details,
+                                   products = products,
+                                   trans = trans,
+                                   active_cust = active_cust ,
+                                   start.ind = start.ind,
+                                   end.ind = end.ind)
+  
+  
+  # the following tables depend on whether we're building training or not ...
+  # ... (active_cust does too, but I deal with that by passing the correct date ...
+  # ... ahead of time)
+  if(train) {
+    
+    # Make list of categories
+    all_categories <- list()
+    
+    
+    # compute and summmarize td's & product information: return ...
+    # ... table and categories for dummies
+    agg_td_prods <- .agg_td_products(td_products = td_products)
+    
+    
+    # get categories and table for aggregated transactions...
+    # ...details
+    all_categories$agg_td_prods <- agg_td_prods$cats
+    agg_td_prods <- agg_td_prods$table
+    
+    
+    # compute and summarize transaction & store information: return ...
+    # ... table and categories for dummies
+    agg_trans_store <- .agg_trans_store(trans_store = trans_store,
+                                        active_cust = active_cust,
+                                        agg_td_products = agg_td_prods,
+                                        start.ind = start.ind,
+                                        end.ind = end.ind)
+    
+    
+    # get table and categories for aggregated transactions
+    all_categories$agg_trans_store <- agg_trans_store$cats
+    agg_trans_store <- agg_trans_store$table
+    
+    
+    # join customer info with aggregated purchase history ...
+    # ... at the customer level: return table and dummy categories
+    basetable <- .create_basetable(customers = customers,
+                                   active_cust = active_cust,
+                                   agg_trans_store = agg_trans_store,
+                                   end.ind = end.ind)
+    
+    
+    # get table and categories for basetable
+    all_categories$basetable <- basetable$cats
+    basetable <- basetable$table
+    
+    
+    # create
+    clv <- .create_clv(trans = trans, 
+                       active_cust = active_cust, 
+                       disc_rate = disc_rate,
+                       trans_details = trans_details, 
+                       products = products,
+                       start.dep = start.dep,
+                       end.dep = end.dep)
+    
+    
+  } else {
+    
+    # pull out the correct categories from the training data
+    cat_td_product <- cats$agg_td_prods
+    cat_agg_trans_store <- cats$agg_trans_store
+    cat_basetable <- cats$basetable
+    
+    
+    # compute and summmarize td's & product information
+    agg_td_prods <- .agg_td_products(td_products = td_products,
+                                     train = train,
+                                     cats = cat_td_product)
+    
+    
+    # compute and summarize transaction & store information
+    agg_trans_store <- .agg_trans_store(trans_store = trans_store,
+                                        active_cust = active_cust,
+                                        agg_td_products = agg_td_prods,
+                                        start.ind = start.ind,
+                                        end.ind = end.ind,
+                                        train = train,
+                                        cats = cat_agg_trans_store)
+    
+    
+    # join customer info with aggregated purchase history ...
+    # ... at the customer level
+    basetable <- .create_basetable(customers = customers,
+                                   active_cust = active_cust,
+                                   agg_trans_store = agg_trans_store,
+                                   end.ind = end.ind,
+                                   train = train,
+                                   cats = cat_basetable)
+  }
+  
+  
+  # if training, return the basetable, categories for dummies, and ...
+  # ... the response variable
+  if(train) {
+    return(list(basetable = basetable, 
+                categories = all_categories, 
+                response = clv$clv))
+  } else {
+    return(list(basetable = basetable))
+  }
+}
