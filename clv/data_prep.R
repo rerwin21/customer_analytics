@@ -215,7 +215,14 @@
     mutate(
       date = as.Date(ymd(date)),
       storeid = as.factor(storeid),
-      ZIP = as.factor(ZIP),
+      ZIP = as.factor(ZIP)
+    ) %>% 
+    filter(
+      custid %in% active_cust,
+      date >= start.ind,
+      date <= end.ind
+    ) %>% 
+    mutate(
       last_7_trip = time_window(date, end.ind, 7),
       last_30_trip = time_window(date, end.ind, 30),
       last_60_trip = time_window(date, end.ind, 60),
@@ -223,12 +230,8 @@
       last_7_total = dollar_window(date, end.ind, 7, total),
       last_30_total = dollar_window(date, end.ind, 30, total),
       last_60_total = dollar_window(date, end.ind, 60, total),
-      last_90_total = dollar_window(date, end.ind, 90, total)
-    ) %>% 
-    filter(
-      custid %in% active_cust,
-      date >= start.ind,
-      date <= end.ind
+      last_90_total = dollar_window(date, end.ind, 90, total),
+      month = month.abb[month(date)]
     )
   
   
@@ -273,7 +276,7 @@
   
   # aggregate sums
   trans_store_sum <- trans_store %>% 
-    select(-c(receiptnbr, date, storeid, ZIP)) %>% 
+    select(-c(receiptnbr, date, storeid, ZIP, month)) %>% 
     group_by(custid) %>% 
     summarise_each(funs(sum))
   
@@ -411,3 +414,6 @@
   # return the response variable
   return(response)  
 }
+
+
+# wrapper function for helpers: read and prepare data -----------------------
