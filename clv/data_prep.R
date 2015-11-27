@@ -35,6 +35,11 @@
   # random forest package
   if(require(randomForest) == F){install.packages("randomForest", quiet = T)
     library(randomForest, quietly = T)}
+  
+  
+  # lift chart
+  if(require(lift) == F){install.packages("lift",repos='http://cran.rstudio.com',quiet=TRUE) 
+    library(lift)}
 }
 
 
@@ -427,7 +432,7 @@
 
 
 # wrapper function for helpers: read and prepare data -----------------------
-.read.and.prepare.data <- function(train = T, ...) {
+.read.and.prepare.data <- function(train = T, disc_rate, active_window, ...){
   
   # get optional arguments: - - - - - - - - - - - - - - - - - - - - - - - - -
   # dates and categories
@@ -437,20 +442,6 @@
   if(length(list(...)$end.dep) != 0) {end.dep <- list(...)$end.dep}
   if(length(list(...)$cats) != 0) {cats <- list(...)$cats}
   
-  # discount rate for clv calculation
-  if(length(list(...)$disc_rate) != 0) {
-    disc_rate <- list(...)$disc_rate
-  } else {
-    disc_rate <- 0.04
-  }
-  
-  # window for active customers (days): default value of 90 means ...
-  # ... must have purchase within last 90 days to be an active customer
-  if(length(list(...)$active_window) != 0) {
-    active_window <- list(...)$active_window
-  } else {
-    active_window <- 90
-  }
   
   # read in data  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   customers <- read.csv("customers.csv", 
