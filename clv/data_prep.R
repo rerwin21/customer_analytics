@@ -87,7 +87,34 @@
 
 
 # join products and trans_details
-.join_td_products <- function(trans_details, products){
+.join_td_products <- function(trans_details, products, 
+                              trans, independent = T,
+                              ...){
+  
+  # get optional arguments
+  if(length(list(...)$start.ind) != 0) {start.ind <- list(...)$start.ind}
+  if(length(list(...)$end.ind) != 0) {end.ind <- list(...)$end.ind}
+  if(length(list(...)$active_cust) != 0) {active_cust <- list(...)$active_cust}
+  
+  # filter transactions to get the active customers
+  if(independent) {
+    
+    # for the independent period
+    receipts <- trans %>% 
+      mutate(date = as.Date(ymd(date))) %>% 
+      filter(custid %in% active_cust,
+             date >= start.ind,
+             date <= end.ind) %>% 
+      select(receiptnbr) %>% 
+      .[[1]]
+  } else {
+    
+    # for the CLV calculation
+    receipts <- trans %>% 
+      select(receiptnbr) %>% 
+      .[[1]]
+  }
+  
   
   # join the tables
   td_products <- left_join(trans_details, products, "SKU")
@@ -98,8 +125,12 @@
     mutate(
       price = price * quantity,
       cost = cost * quantity,
-      profit = price - cost
-    )
+      profit = price - cost,
+      prod_family = str_extract(family, "\\d{1,2}"),
+      prod_category = str_extract(family, "\\d{2}$")
+    ) %>% 
+    select(-family) %>% 
+    filter(receiptnbr %in% receipts)
   
   
   # return the td's with products
@@ -114,6 +145,12 @@
   if(length(list(...)$cats) != 0) {cats <- list(...)$cats}
   
   
+  # remove SKU, don't need it here. Only use was to join with...
+  # ... with the products table
+  td_products <- td_products %>% 
+    select(-SKU)
+  
+  
   # create cats based 
   if(train == T){
     cats <- categories(td_products)
@@ -122,7 +159,7 @@
   
   # create dummies
   td_prods_dummy <- dummy(td_products,
-                          int = T,
+                          int = T, 
                           object = cats)
   
   
@@ -132,9 +169,13 @@
   
   # summarize the columns and dummies
   td_products <- td_products %>% 
-    select(-c(SKU, family)) %>% 
+    select(-c(prod_family, prod_category)) %>% 
     group_by(receiptnbr) %>% 
     summarise_each(funs(sum))
+  
+  
+  # return the aggregated td_products
+  return(td_products)
 }
 
 
@@ -146,12 +187,27 @@
   if(length(list(...)$cats) != 0) {cats <- list(...)$cats}
   
   
-  # convert factors and date then filter
+  # quick function to test whether a purhcase has taken place ...
+  # ... with a give window: e.g. last 30 days, 60 days, etc.
+  time_window <- function(date, end.ind, days_since){
+    
+    # create the interval object
+    interval_window <- interval(end.ind - days_since, end.ind)
+    within_window <- date %within% interval_window # is date in the interval
+    purchase_within <- ifelse(within_window, 1, 0) # if so, give it a 1
+    return(purchase_within) # return yes(1) or no(0)
+  }
+  
+  # convert factors and date then filter, then create trips per window
   trans_store <- trans_store %>% 
     mutate(
       date = as.Date(ymd(date)),
       storeid = as.factor(storeid),
-      ZIP = as.factor(ZIP)
+      ZIP = as.factor(ZIP),
+      last_7 = time_window(date, end.ind, 7),
+      last_30 = time_window(date, end.ind, 30),
+      last_60 = time_window(date, end.ind, 60),
+      last_90 = time_window(date, end.ind, 90)
     ) %>% 
     filter(
       custid %in% active_cust,
@@ -178,11 +234,14 @@
   trans_store <- left_join(trans_store, agg_td_products, "receiptnbr")
   
   
-  # get the count of stores
+  # get the count of trips and store, LOR, and recency
   trans_store_count <- trans_store %>% 
     group_by(custid) %>% 
     summarise(
-      n_trips = n()
+      n_trips = n(),
+      n_stores = n_distinct(storeid),
+      LOR = max(date) - min(date),
+      recency = end.ind - max(date)
     )
   
   
@@ -245,7 +304,7 @@
     select(-c(rent, garden, gender, dob)) %>% 
     arrange(custid)
   
- 
+  
   # return the basetable 
   return(basetable)
 }
@@ -253,9 +312,9 @@
 
 # create dependent variable: clv
 .create_clv <- function(trans, active_cust, disc_rate = 0.04,
-                       trans_details, products, 
-                       start.dep, end.dep,
-                       train = T){
+                        trans_details, products, 
+                        start.dep, end.dep,
+                        train = T){
   
   # convert date
   trans$date <- as.Date(ymd(trans$date))
@@ -269,7 +328,10 @@
   
   
   # get profit per item
-  profit_item <- .join_td_products(trans_details, products)
+  profit_item <- .join_td_products(trans_details, 
+                                   products,
+                                   trans,
+                                   independent = F)
   
   
   # summarize profit per item to transaction level
