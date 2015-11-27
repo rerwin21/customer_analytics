@@ -198,16 +198,32 @@
     return(purchase_within) # return yes(1) or no(0)
   }
   
+  
+  # similar function but for the purchase amount not binary
+  dollar_window <- function(date, end.ind, days_since, total){
+    
+    # create the interval object
+    interval_window <- interval(end.ind - days_since, end.ind)
+    within_window <- date %within% interval_window # is date in the interval
+    total_within <- ifelse(within_window, total, 0) # T, return dollar amt
+    return(total_within) 
+  }
+  
+  
   # convert factors and date then filter, then create trips per window
   trans_store <- trans_store %>% 
     mutate(
       date = as.Date(ymd(date)),
       storeid = as.factor(storeid),
       ZIP = as.factor(ZIP),
-      last_7 = time_window(date, end.ind, 7),
-      last_30 = time_window(date, end.ind, 30),
-      last_60 = time_window(date, end.ind, 60),
-      last_90 = time_window(date, end.ind, 90)
+      last_7_trip = time_window(date, end.ind, 7),
+      last_30_trip = time_window(date, end.ind, 30),
+      last_60_trip = time_window(date, end.ind, 60),
+      last_90_trip = time_window(date, end.ind, 90),
+      last_7_total = dollar_window(date, end.ind, 7, total),
+      last_30_total = dollar_window(date, end.ind, 30, total),
+      last_60_total = dollar_window(date, end.ind, 60, total),
+      last_90_total = dollar_window(date, end.ind, 90, total)
     ) %>% 
     filter(
       custid %in% active_cust,
@@ -232,6 +248,16 @@
   
   # join product details from aggregated transactions details
   trans_store <- left_join(trans_store, agg_td_products, "receiptnbr")
+  
+  
+  # get amount of profit in recent windows
+  trans_store <- trans_store %>% 
+    mutate(
+      last_7_profit = dollar_window(date, end.ind, 7, profit),
+      last_30_profit = dollar_window(date, end.ind, 30, profit),
+      last_60_profit = dollar_window(date, end.ind, 60, profit),
+      last_90_profit = dollar_window(date, end.ind, 90, profit)
+    )
   
   
   # get the count of trips and store, LOR, and recency
