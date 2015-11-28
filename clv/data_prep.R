@@ -715,7 +715,7 @@ clv_model <- function(start.ind, end.ind, start.dep, end.dep,
     
     
     # actual vs predicted
-    a_p <- data.frame(actual = Y_Test, pred = pred)
+    a_p <- data.frame(actual = Y_Test, pred = pred, n_trips = X_Test$n_trips)
     
     
     # evaluation of regression
@@ -733,9 +733,13 @@ clv_model <- function(start.ind, end.ind, start.dep, end.dep,
     
     # plot actual versus predicted
     p <- ggplot(a_p, aes(x = actual, y = pred)) + 
-      geom_point() +
-      geom_abline(color = "red") + 
-      ggtitle(paste("RandomForest Regression in R r^2=", r2, sep=""))
+      geom_point(aes(size = n_trips), alpha = 0.6) +
+      geom_abline(color = "darkred") + 
+      ggtitle(paste("RandomForest Regression in R r^2=", round(r2, 2), sep="")) +
+      theme(panel.grid.major = element_blank(), 
+            panel.grid.minor = element_blank(), 
+            panel.background = element_rect(fill = "bisque"),
+            axis.line = element_blank())
     
     
     # print plot
