@@ -731,6 +731,10 @@ clv_model <- function(start.ind, end.ind, start.dep, end.dep,
     cat("R-squared for training set is: ", r2_train)
     
     
+    # quick color reference for ggplot
+    # http://sape.inf.usi.ch/quick-reference/ggplot2/colour
+    
+    
     # plot actual versus predicted
     p <- ggplot(a_p, aes(x = actual, y = pred)) + 
       geom_point(aes(size = n_trips), alpha = 0.6) +
@@ -744,6 +748,21 @@ clv_model <- function(start.ind, end.ind, start.dep, end.dep,
     
     # print plot
     print(p)
+    
+    
+    # plot actual versus predicted: version 2
+    p2 <- ggplot(a_p, aes(x = actual, y = pred)) + 
+      geom_point(aes(size = n_trips), alpha = 0.6) +
+      geom_abline(color = "red") + 
+      ggtitle(paste("RandomForest Regression in R r^2=", round(r2, 2), sep="")) +
+      theme(panel.grid.major = element_blank(), 
+            panel.grid.minor = element_blank(), 
+            panel.background = element_blank(), 
+            axis.line = element_line(colour = "black"))
+    
+    
+    # print plot
+    print(p2)
     
     
     # plot the partial dependence plot: pick a few
