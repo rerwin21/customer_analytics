@@ -98,26 +98,30 @@ products <- read.csv("products.csv",
                      nrows = 10)
 
 
+products <- read.csv("products.csv", 
+                     stringsAsFactors = F,
+                     colClasses = rep("character", 
+                                      ncol(products)))
+
+
+# columns to change
+num_cols <- c("family", "price", "cost")
+
+
+# change the columns to numeric for product
+products[ , num_cols] <- suppressWarnings(
+  sapply(products [ , num_cols], as.numeric)
+) 
+
+
 trans_details <- read.csv("transactiondetails.csv",
                           stringsAsFactors = F,
                           nrows = 10)
 
 
-# customer defaults and change SKU
-prod_class <- sapply(products, class)
-prod_class["SKU"] <- "character"
-
-
 # td defaults and change SKU
 td_class <- sapply(trans_details, class)
 td_class["SKU"] <- "character"
-
-
-# reload product and td with correct classes
-products <- read.csv("products.csv", 
-                     stringsAsFactors = F,
-                     colClasses = prod_class,
-                     skipNul = T)
 
 
 trans_details <- read.csv("transactiondetails.csv",
