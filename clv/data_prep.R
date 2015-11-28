@@ -725,6 +725,7 @@ clv_model <- function(start.ind, end.ind, start.dep, end.dep,
     cat("R-squared for test set is: ", r2, "\n")
     cat("R-squared test set check: ", r2_check, "\n")
     
+    
     # get R2 for training set as well
     r2_train <- rSquared(Y_Train, Y_Train - pred_train)
     cat("R-squared for training set is: ", r2_train)
@@ -779,4 +780,25 @@ clv_model <- function(start.ind, end.ind, start.dep, end.dep,
   
   # return object
   return(out)
+}
+
+
+# Predict function ----------------------------------------------------------
+predict.clv <- function(object, dump.date) {
+  
+  # Call read and prepare data to get basetable 
+  dataprep <- .read.and.prepare.data(train = F,
+                                     start.ind = dump.date-object$length,
+                                     end.ind = dump.date,
+                                     cats = object$categories,
+                                     active_window = object$active_window)
+  
+  
+  # create predictors and predictions
+  X <- dataprep$basetable[, -which(names(dataprep$basetable) %in% c("custid"))]
+  predictions <- predict(object$model, newdata = X)
+  
+  
+  # return the predictions
+  return(data.frame(CustomerID=dataprep$basetable$custid, Prediction=predictions))
 }
