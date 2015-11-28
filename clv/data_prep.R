@@ -166,6 +166,10 @@
     select(-SKU)
   
   
+  # remove na's
+  td_products[is.na(td_products)] <- 0
+  
+  
   # create cats based 
   if(train == T){cats <- categories(td_products)}
   
@@ -528,7 +532,7 @@
   td_products <- .join_td_products(trans_details = trans_details,
                                    products = products,
                                    trans = trans,
-                                   active_cust = active_cust ,
+                                   active_cust = active_cust,
                                    start.ind = start.ind,
                                    end.ind = end.ind)
   
@@ -631,7 +635,8 @@
     return(list(basetable = basetable, 
                 categories = all_categories, 
                 response = clv$clv,
-                active_window = active_window))
+                active_window = active_window,
+                clv = clv))
   } else {
     return(list(basetable = basetable))
   }
@@ -659,7 +664,7 @@ clv_model <- function(start.ind, end.ind, start.dep, end.dep,
   }
   
   
-  # Call read and prepare data to get basetable - - - - - - - - - - - - - - -
+  # call read and prepare data to get basetable - - - - - - - - - - - - - - -
   dataprep <- .read.and.prepare.data(train = T, 
                                      start.ind = start.ind, 
                                      end.ind = end.ind, 
@@ -677,34 +682,36 @@ clv_model <- function(start.ind, end.ind, start.dep, end.dep,
   response <- dataprep$response
   
   
-  # Evaluate Performace of a Random Forest Model 
+  # evaluate the performance of random forest model
   if(evaluate) {
     
     #get training indices
     train <- sample(nrow(basetable), .7*nrow(basetable))
     test <- c(1:nrow(basetable))[-train]
     
-    # split basetable into Train and Test portions
+    
+    # split basetable into train and test portions
     X_Train <- basetable[train, -which(names(basetable) %in% c("custid"))]
     Y_Train <- response[train]
     X_Test <- basetable[test, -which(names(basetable) %in% c("custid"))]
     Y_Test <- response[test]
     
-    # Train randomForest model
+    
+    # train random forest model
     RFmodel <- randomForest(X_Train, Y_Train, ntree = 1000, importance = TRUE)
     
     
-    # Plot Learning Curve
+    # plot the learning curve
     plot(RFmodel)
     
     
-    # Plot Variable Importances
+    # variable importance plots
     varImpPlot(RFmodel, n = 10)
     
     
-    # Print AUC
-    # must predict with type='prob' (want scores)
-    pred <- predict(RFmodel, newdata = X_Test)
+    # get predictions on test set & training set
+    pred <- predict(RFmodel, X_Test)
+    pred_train <- predict(RFmodel, X_Train)
     
     
     # actual vs predicted
@@ -713,7 +720,12 @@ clv_model <- function(start.ind, end.ind, start.dep, end.dep,
     
     # evaluation of regression
     r2 <- rSquared(Y_Test, Y_Test - pred)
-    cat("R-squared for test set is: ", r2)
+    cat("R-squared for test set is: ", r2, "\n")
+    
+    
+    # get R2 for training set as well
+    r2_train <- rSquared(Y_Train, Y_Train - pred_train)
+    cat("R-squared for training set is: ", r2_train)
     
     
     # plot actual versus predicted
@@ -755,7 +767,8 @@ clv_model <- function(start.ind, end.ind, start.dep, end.dep,
               basetable = basetable,
               active_window = dataprep$active_window,
               act_pred = a_p,
-              r2 = r2)
+              r2 = r2,
+              clv = dataprep$clv)
   
   
   # change class for method dispatching
