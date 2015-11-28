@@ -720,8 +720,10 @@ clv_model <- function(start.ind, end.ind, start.dep, end.dep,
     
     # evaluation of regression
     r2 <- rSquared(Y_Test, Y_Test - pred)
+    r2_check <- sum((Y_Test - pred)^2)/sum((Y_Test - mean(Y_Test))^2)
+    r2_check <- 1 - r2_check
     cat("R-squared for test set is: ", r2, "\n")
-    
+    cat("R-squared test set check: ", r2_check, "\n")
     
     # get R2 for training set as well
     r2_train <- rSquared(Y_Train, Y_Train - pred_train)
